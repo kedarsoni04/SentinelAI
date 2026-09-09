@@ -1,0 +1,84 @@
+services:
+  # ─── PostgreSQL Production Database ─────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sentinelai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel_secure_pass_2026
+      POSTGRES_DB: sentinelai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel -d sentinelai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sentinel_net
+
+  # ─── SentinelAI FastAPI Backend ─────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinelai-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql://sentinel:sentinel_secure_pass_2026@postgres:5432/sentinelai
+      JWT_SECRET_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      VIDEO_STORAGE_PATH: /app/storage
+      MAX_VIDEO_SIZE_MB: 250
+      SAMPLE_INTERVAL_SECONDS: 2.0
+      YOLO_MODEL: yolo11n.pt
+      TRACKING_ENABLED: "true"
+      AI_PROVIDER: mock
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_AUTH_PER_MINUTE: 15
+      RATE_LIMIT_AI_PER_MINUTE: 20
+    volumes:
+      - storage_data:/app/storage
+    ports:
+      - "8000:8000"
+    networks:
+      - sentinel_net
+
+  # ─── SentinelAI Next.js Frontend ────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    container_name: sentinelai-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    networks:
+      - sentinel_net
+
+volumes:
+  postgres_data:
+    name: sentinelai_postgres_data
+  storage_data:
+    name: sentinelai_storage_data
+
+networks:
+  sentinel_net:
+    name: sentinelai_network
+    driver: bridge
