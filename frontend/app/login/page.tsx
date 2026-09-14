@@ -2,8 +2,9 @@
 
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Shield, AlertCircle, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { extractErrorMessage } from '@/services/auth';
 
@@ -61,13 +62,15 @@ export default function LoginPage() {
 
       <div className="relative w-full max-w-sm">
         {/* Logo / Brand */}
-        <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-9 h-9 bg-[#3b7dd8] rounded-lg flex items-center justify-center">
-            <Shield className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-semibold tracking-tight text-[#e8edf5]">
-            SentinelAI
-          </span>
+        <div className="flex items-center justify-center mb-8">
+          <Image
+            src="/sentinelogo.png"
+            alt="SentinelAI"
+            width={180}
+            height={60}
+            priority
+            className="object-contain"
+          />
         </div>
 
         {/* Card */}

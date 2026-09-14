@@ -346,7 +346,7 @@ export interface SecurityEvent {
   evidence_frame_id: string | null;
   evidence_frame_url: string | null;
   annotated_frame_url: string | null;
-  metadata_json: Record<string, any> | null;
+  metadata_json: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -410,7 +410,7 @@ export type RealtimeMessageType =
 
 export interface RealtimeMessage {
   type: RealtimeMessageType;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   job_id?: string;
   timestamp: string;
 }

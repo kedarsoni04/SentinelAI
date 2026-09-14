@@ -11,7 +11,6 @@ import {
   login as loginService,
   register as registerService,
   logout as logoutService,
-  extractErrorMessage,
 } from '@/services/auth';
 import type { LoginRequest, RegisterRequest } from '@/types';
 

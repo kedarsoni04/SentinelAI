@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
-  Shield,
   LayoutDashboard,
   Radio,
   Camera,
@@ -49,11 +49,15 @@ export default function Sidebar() {
       h-screen sticky top-0
     ">
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-5 h-14 border-b border-[#1e2736]">
-        <div className="w-7 h-7 bg-[#3b7dd8] rounded-md flex items-center justify-center">
-          <Shield className="w-4 h-4 text-white" />
-        </div>
-        <span className="text-sm font-semibold text-[#e8edf5] tracking-tight">SentinelAI</span>
+      <div className="flex items-center justify-center px-5 h-14 border-b border-[#1e2736]">
+        <Image
+          src="/sentinelogo.png"
+          alt="SentinelAI"
+          width={140}
+          height={40}
+          priority
+          className="object-contain"
+        />
       </div>
 
       {/* Navigation */}
