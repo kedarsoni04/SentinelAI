@@ -1,0 +1,77 @@
+# ==============================================================================
+# SentinelAI — Render Blueprint Specification (Infrastructure as Code)
+# ==============================================================================
+# To deploy with one click:
+# Go to Render Dashboard -> Blueprints -> New Blueprint Instance -> Select Repo
+# ==============================================================================
+
+databases:
+  - name: sentinelai-postgres
+    databaseName: sentinelai
+    user: sentinel
+    plan: free # Note: Free tier expires after 30 days. Use Starter for permanent.
+    region: oregon
+
+services:
+  # ─── FastAPI Backend Web Service ───────────────────────────────────────────
+  - type: web
+    name: sentinelai-backend
+    env: docker
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter # Recommended: 1 GB+ RAM for YOLOv11 & PyTorch inference
+    healthCheckPath: /api/health
+    disk:
+      name: sentinelai-storage
+      mountPath: /app/storage
+      sizeGB: 10
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sentinelai-postgres
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 120
+      - key: CORS_ORIGINS
+        value: "https://sentinelai-frontend.onrender.com"
+      - key: VIDEO_STORAGE_PATH
+        value: /app/storage
+      - key: MAX_VIDEO_SIZE_MB
+        value: 250
+      - key: SAMPLE_INTERVAL_SECONDS
+        value: 2.0
+      - key: YOLO_MODEL
+        value: yolo11n.pt
+      - key: TRACKING_ENABLED
+        value: "true"
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+
+  # ─── Next.js Frontend Web Service ──────────────────────────────────────────
+  - type: web
+    name: sentinelai-frontend
+    env: node
+    region: oregon
+    rootDir: frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: sentinelai-backend
+          property: host
