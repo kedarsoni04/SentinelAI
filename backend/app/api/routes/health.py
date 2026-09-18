@@ -9,12 +9,13 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 
-router = APIRouter(prefix="/api", tags=["System & Health"])
+router = APIRouter(tags=["System & Health"])
 
 START_TIME = time.time()
 
 
-@router.get("/health", summary="Liveness Probe")
+@router.get("/api/health", summary="Liveness Probe")
+@router.get("/health", summary="Liveness Probe (Direct)")
 def health_check() -> Dict[str, Any]:
     """
     Liveness Check:
@@ -31,7 +32,8 @@ def health_check() -> Dict[str, Any]:
     }
 
 
-@router.get("/ready", summary="Readiness Probe")
+@router.get("/api/ready", summary="Readiness Probe")
+@router.get("/ready", summary="Readiness Probe (Direct)")
 def readiness_check(
     response: Response,
     db: Session = Depends(get_db),
