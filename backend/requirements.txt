@@ -14,7 +14,7 @@ httpx>=0.28
 opencv-python-headless>=4.10.0
 numpy>=1.26.0
 ultralytics>=8.3.0
-lap>=0.5.12
+lapx>=0.5.5
 
 # AI Incident Intelligence (Phase 8) — optional; system falls back to mock if absent
 google-generativeai>=0.8.0

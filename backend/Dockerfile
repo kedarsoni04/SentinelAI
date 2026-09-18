@@ -22,9 +22,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install lightweight CPU-only PyTorch to prevent 2.5GB CUDA download hang
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application source and configuration
@@ -39,9 +40,5 @@ RUN mkdir -p storage/uploads storage/frames storage/annotated
 # Expose FastAPI service port
 EXPOSE 8000
 
-# Docker healthcheck using the liveness endpoint
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
-
-# Production ASGI server execution
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Production ASGI server execution: bind to dynamic $PORT from Render, 1 worker to save RAM
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
