@@ -5,6 +5,8 @@
 # Environment variables — NEVER commit real secrets
 .env
 .env.local
+.env.prod
+.env*.prod
 .env.development.local
 .env.test.local
 .env.production.local

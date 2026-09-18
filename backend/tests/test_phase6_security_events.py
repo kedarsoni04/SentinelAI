@@ -338,6 +338,7 @@ def test_rule_2_loitering_detector_duration_threshold():
     assert len(events) == 1
     ev = events[0]
     assert ev.event_type == SecurityEventType.LOITERING
+    assert ev.duration_seconds is not None
     assert ev.duration_seconds >= 10.0
     assert ev.metadata["observed_duration_seconds"] >= 10.0
     assert ev.is_active is True
@@ -381,6 +382,7 @@ def test_rule_3_stationary_object_detector():
     assert ev.event_type == SecurityEventType.STATIONARY_OBJECT
     assert ev.severity == SecurityEventSeverity.HIGH
     assert ev.metadata["observed_displacement_pixels"] <= 20.0
+    assert ev.duration_seconds is not None
     assert ev.duration_seconds >= 15.0
 
 

@@ -1,0 +1,131 @@
+# ==============================================================================
+# SentinelAI — Production Multi-Container Orchestration
+# ==============================================================================
+# Usage:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# ==============================================================================
+
+services:
+  # ─── PostgreSQL Database (Protected, Internal Only) ──────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sentinelai-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinelai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel} -d ${POSTGRES_DB:-sentinelai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - sentinel_internal
+
+  # ─── FastAPI Backend (Protected, Internal Only) ──────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sentinelai-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-120}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      VIDEO_STORAGE_PATH: /app/storage
+      MAX_VIDEO_SIZE_MB: ${MAX_VIDEO_SIZE_MB:-250}
+      SAMPLE_INTERVAL_SECONDS: ${SAMPLE_INTERVAL_SECONDS:-2.0}
+      YOLO_MODEL: ${YOLO_MODEL:-yolo11n.pt}
+      TRACKING_ENABLED: ${TRACKING_ENABLED:-true}
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3.8-27b}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-20}
+      RATE_LIMIT_AI_PER_MINUTE: ${RATE_LIMIT_AI_PER_MINUTE:-30}
+    volumes:
+      - storage_data:/app/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - sentinel_internal
+
+  # ─── Next.js Frontend (Protected, Internal Only) ─────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: sentinelai-frontend
+    restart: always
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    networks:
+      - sentinel_internal
+
+  # ─── Nginx Edge Reverse Proxy & SSL Gateway (Public Facing) ──────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: sentinelai-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - sentinel_internal
+
+  # ─── Certbot Auto-Renewing SSL Certificates ──────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: sentinelai-certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - sentinel_internal
+
+volumes:
+  postgres_data:
+    name: sentinelai_prod_postgres_data
+  storage_data:
+    name: sentinelai_prod_storage_data
+  certbot_conf:
+    name: sentinelai_certbot_conf
+  certbot_www:
+    name: sentinelai_certbot_www
+
+networks:
+  sentinel_internal:
+    name: sentinelai_prod_network
+    driver: bridge
