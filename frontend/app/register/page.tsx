@@ -2,7 +2,6 @@
 
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -76,10 +75,10 @@ export default function RegisterPage() {
   })();
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-[#0a0d12] px-4 py-8">
+    <main className="min-h-screen overflow-y-auto flex flex-col items-center justify-center bg-[#0a0d12] px-4 py-6">
       {/* Background grid */}
       <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        className="fixed inset-0 opacity-[0.03] pointer-events-none"
         style={{
           backgroundImage:
             'linear-gradient(#3b7dd8 1px, transparent 1px), linear-gradient(90deg, #3b7dd8 1px, transparent 1px)',
@@ -88,16 +87,14 @@ export default function RegisterPage() {
       />
 
       <div className="relative w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex items-center justify-center mb-8">
-          <Image
-            src="/sentinelogo.png"
-            alt="SentinelAI"
-            width={180}
-            height={60}
-            priority
-            className="object-contain"
-          />
+        {/* Text Logo */}
+        <div className="flex items-center justify-center gap-2.5 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#3b7dd8] to-[#1a4fa0] flex items-center justify-center shrink-0">
+            <span className="text-white font-bold text-base">S</span>
+          </div>
+          <span className="text-[#e8edf5] font-bold text-xl tracking-tight">
+            Sentinel<span className="text-[#3b7dd8]">AI</span>
+          </span>
         </div>
 
         <div className="bg-[#111620] border border-[#1e2736] rounded-xl p-8">

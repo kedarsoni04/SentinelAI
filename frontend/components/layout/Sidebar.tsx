@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -50,14 +49,14 @@ export default function Sidebar() {
     ">
       {/* Brand */}
       <div className="flex items-center justify-center px-5 h-14 border-b border-[#1e2736]">
-        <Image
-          src="/sentinelogo.png"
-          alt="SentinelAI"
-          width={140}
-          height={40}
-          priority
-          className="object-contain"
-        />
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#3b7dd8] to-[#1a4fa0] flex items-center justify-center shrink-0">
+            <span className="text-white font-bold text-sm">S</span>
+          </div>
+          <span className="text-[#e8edf5] font-bold text-base tracking-tight">
+            Sentinel<span className="text-[#3b7dd8]">AI</span>
+          </span>
+        </div>
       </div>
 
       {/* Navigation */}
