@@ -6,8 +6,24 @@ import axios, { AxiosError, AxiosResponse } from 'axios';
  * Base URL is configured via NEXT_PUBLIC_API_URL environment variable.
  * All components and services must use this instance — never hardcode URLs.
  */
+import { clearAuthData, getStoredToken } from './auth';
+
+/**
+ * Normalizes the API base URL.
+ * If NEXT_PUBLIC_API_URL lacks a protocol (e.g. Render's property: host providing host without https://),
+ * it safely prefixes https://.
+ */
+export function getApiBaseUrl(): string {
+  const raw = (process.env.NEXT_PUBLIC_API_URL || '').trim();
+  if (!raw) return 'http://localhost:8000';
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/')) {
+    return raw;
+  }
+  return `https://${raw}`;
+}
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -15,12 +31,12 @@ const api = axios.create({
 });
 
 // ─── Request Interceptor ─────────────────────────────────────────────────────
-// Automatically attach the JWT token from localStorage to every request.
+// Automatically attach the JWT token from storage to every request.
 
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('sentinel_token');
+      const token = getStoredToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -44,13 +60,12 @@ api.interceptors.response.use(
       );
     }
 
-    // 401: Token expired or invalid — clear local auth state
-    if (error.response.status === 401) {
+    // 401: Token expired or invalid — clear both localStorage & cookies to prevent redirect loops
+    if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('sentinel_token');
-        localStorage.removeItem('sentinel_user');
+        clearAuthData();
         // Redirect to login if not already there
-        if (!window.location.pathname.startsWith('/login')) {
+        if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
           window.location.href = '/login';
         }
       }

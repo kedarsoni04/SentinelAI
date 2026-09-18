@@ -1,4 +1,5 @@
-import api from './api';
+import api, { getApiBaseUrl } from './api';
+import { getStoredToken } from './auth';
 import type {
   ConnectionStatus,
   RealtimeMessage,
@@ -6,8 +7,10 @@ import type {
 } from '@/types';
 
 export function getWebSocketBaseUrl(): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  return apiUrl.replace(/^http/, 'ws');
+  const apiUrl = getApiBaseUrl();
+  if (apiUrl.startsWith('https://')) return apiUrl.replace('https://', 'wss://');
+  if (apiUrl.startsWith('http://')) return apiUrl.replace('http://', 'ws://');
+  return `wss://${apiUrl}`;
 }
 
 /**
@@ -46,10 +49,10 @@ export async function getActiveMonitoringSessions(): Promise<RealtimeSessionMetr
  * Construct authenticated preview frame URL for real-time monitoring.
  */
 export function getRealtimeFrameUrl(jobId: string, timestamp?: number): string {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const token = typeof window !== 'undefined' ? localStorage.getItem('sentinel_token') : null;
+  const baseUrl = getApiBaseUrl();
+  const token = getStoredToken();
   const tsParam = timestamp ? `&ts=${timestamp}` : `&_t=${Date.now()}`;
-  return `${baseUrl}/api/video-analysis/${jobId}/realtime/frame?token=${token || ''}${tsParam}`;
+  return `${baseUrl}/api/video-analysis/${jobId}/realtime/frame?token=${encodeURIComponent(token || '')}${tsParam}`;
 }
 
 export interface WebSocketClientOptions {
@@ -84,7 +87,7 @@ export class RealtimeWebSocketClient {
     this.isManuallyClosed = false;
     this.clearTimers();
 
-    const token = localStorage.getItem('sentinel_token');
+    const token = getStoredToken();
     if (!token) {
       this.options.onStatusChange('OFFLINE');
       return;

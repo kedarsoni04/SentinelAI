@@ -74,4 +74,5 @@ services:
         fromService:
           type: web
           name: sentinelai-backend
-          property: host
+          property: url
+

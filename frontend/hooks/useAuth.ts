@@ -32,42 +32,50 @@ export function useAuth(): UseAuthReturn {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount: restore from localStorage, then validate token with backend
+  // On mount: restore from localStorage/cookie, then validate token with backend
   useEffect(() => {
+    let isMounted = true;
+
     const initAuth = async () => {
       const token = getStoredToken();
       const storedUser = getStoredUser();
 
       if (!token) {
-        setIsLoading(false);
+        clearAuthData();
+        if (isMounted) setIsLoading(false);
         return;
       }
 
-      // Optimistically set stored user for instant UI
-      if (storedUser) setUser(storedUser);
+      // Optimistically set stored user for instant UI feedback
+      if (storedUser && isMounted) {
+        setUser(storedUser);
+      }
 
       try {
         const freshUser = await getCurrentUser();
-        setUser(freshUser);
-        // Refresh stored user data in case it changed
-        localStorage.setItem('sentinel_user', JSON.stringify(freshUser));
+        if (isMounted) {
+          setUser(freshUser);
+          saveAuthData(token, freshUser);
+        }
       } catch {
-        // Token invalid or expired — clear everything
+        // Token invalid or expired — clear storage and cookies
         clearAuthData();
-        setUser(null);
+        if (isMounted) setUser(null);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     initAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = useCallback(async (data: LoginRequest) => {
     const response = await loginService(data);
     saveAuthData(response.access_token, response.user);
-    // Also set a cookie for middleware-level route protection
-    document.cookie = `sentinel_token=${response.access_token}; path=/; max-age=${60 * 60}; SameSite=Strict`;
     setUser(response.user);
   }, []);
 
@@ -76,7 +84,6 @@ export function useAuth(): UseAuthReturn {
     // Automatically log the user in upon successful registration
     const response = await loginService({ email: data.email, password: data.password });
     saveAuthData(response.access_token, response.user);
-    document.cookie = `sentinel_token=${response.access_token}; path=/; max-age=${60 * 60}; SameSite=Strict`;
     setUser(response.user);
   }, []);
 
@@ -88,6 +95,8 @@ export function useAuth(): UseAuthReturn {
   const refreshUser = useCallback(async () => {
     try {
       const freshUser = await getCurrentUser();
+      const token = getStoredToken();
+      if (token) saveAuthData(token, freshUser);
       setUser(freshUser);
     } catch {
       clearAuthData();

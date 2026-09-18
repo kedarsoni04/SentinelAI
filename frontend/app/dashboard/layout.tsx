@@ -25,21 +25,18 @@ export default function DashboardLayout({
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Show a full-screen loader while validating auth
-  if (isLoading) {
+  // Show a full-screen loader while validating auth or redirecting
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#0a0d12] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-[#3b7dd8] animate-spin" />
-          <p className="text-sm text-[#8b96a8]">Initializing SentinelAI…</p>
+          <p className="text-sm text-[#8b96a8]">
+            {isLoading ? 'Initializing SentinelAI…' : 'Redirecting to sign in…'}
+          </p>
         </div>
       </div>
     );
-  }
-
-  // Don't render protected content before redirect fires
-  if (!isAuthenticated) {
-    return null;
   }
 
   return (
