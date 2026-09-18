@@ -270,104 +270,153 @@ export default function RealtimeMonitoringPage() {
     (e) => (e.severity === 'HIGH' || e.severity === 'CRITICAL') && e.status === 'OPEN'
   ).length;
 
+  // Derived connection label and colours (Fix #1 & #7)
+  const connectionLabel =
+    connectionStatus === 'LIVE'
+      ? 'Connected'
+      : connectionStatus === 'RECONNECTING'
+      ? 'Reconnecting…'
+      : 'Disconnected';
+
+  const connectionDotClass =
+    connectionStatus === 'LIVE'
+      ? 'bg-emerald-400'
+      : connectionStatus === 'RECONNECTING'
+      ? 'bg-amber-400 animate-pulse'
+      : 'bg-zinc-500';
+
+  const connectionPillClass =
+    connectionStatus === 'LIVE'
+      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+      : connectionStatus === 'RECONNECTING'
+      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+      : 'bg-zinc-800/60 border-zinc-700 text-zinc-400';
+
+  // Format current_timestamp as HH:MM:SS (Fix #4)
+  const formatVideoTime = (secs: number): string => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = Math.floor(secs % 60);
+    return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':');
+  };
+
+  const isSessionActive = sessionStatus === 'RUNNING' || sessionStatus === 'STARTING';
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Toast notifications */}
       <Toast toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Header & Connection Status */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1e2736] pb-5">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-[#e8edf5]">SOC Live Operations & Monitoring</h1>
-
-            {/* Connection Status Pill */}
-            <div
-              className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold border ${
-                connectionStatus === 'LIVE'
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                  : connectionStatus === 'RECONNECTING'
-                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 animate-pulse'
-                  : 'bg-zinc-800/60 border-zinc-700 text-zinc-400'
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  connectionStatus === 'LIVE'
-                    ? 'bg-emerald-400'
-                    : connectionStatus === 'RECONNECTING'
-                    ? 'bg-amber-400'
-                    : 'bg-zinc-500'
-                }`}
-              />
-              <span>{connectionStatus}</span>
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-4 border-b border-[#1e2736] pb-5">
+        {/* Row 1: title + connection pill */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl font-semibold text-[#e8edf5]">SOC Live Operations &amp; Monitoring</h1>
+            {/* Fix #1 & #7 — visible connection indicator with readable labels */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold border ${connectionPillClass}`}>
+              <span className={`w-2 h-2 rounded-full ${connectionDotClass}`} />
+              <span>{connectionLabel}</span>
+            </div>
+            {/* Fix #1 — monitoring session status badge */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold border ${
+              sessionStatus === 'RUNNING'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : sessionStatus === 'STARTING'
+                ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 animate-pulse'
+                : sessionStatus === 'STOPPING'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 animate-pulse'
+                : sessionStatus === 'FAILED'
+                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                : sessionStatus === 'COMPLETED'
+                ? 'bg-sky-500/10 border-sky-500/30 text-sky-400'
+                : 'bg-zinc-800/60 border-zinc-700 text-zinc-400'
+            }`}>
+              <span>Monitoring: {sessionStatus}</span>
             </div>
           </div>
-          <p className="text-xs text-[#8b96a8] mt-1">
-            Real-time surveillance stream telemetry, instant threat detection, and active incident response.
-          </p>
-        </div>
 
-        {/* Action Controls & Session Selector */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="relative">
-            <select
-              value={selectedJobId}
-              onChange={(e) => setSelectedJobId(e.target.value)}
-              disabled={sessionStatus === 'RUNNING' || isLoadingJobs}
-              className="px-3 py-1.5 rounded-lg bg-[#111620] border border-[#1e2736] text-xs text-[#e8edf5] focus:outline-none focus:border-[#3b7dd8] disabled:opacity-50"
-            >
-              {jobs.map((job) => (
-                <option key={job.id} value={job.id}>
-                  {job.camera?.name ? `[${job.camera.name}] ` : ''}
-                  {job.original_filename} ({job.status})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {sessionStatus === 'RUNNING' || sessionStatus === 'STARTING' ? (
-            <button
-              type="button"
-              disabled={isStopping}
-              onClick={handleStopMonitoring}
-              className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
-            >
-              <Square className="w-3.5 h-3.5 fill-current" />
-              <span>{isStopping ? 'Stopping...' : 'Stop Monitoring'}</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={isStarting || !selectedJobId}
-              onClick={handleStartMonitoring}
-              className="px-3.5 py-1.5 rounded-lg bg-[#3b7dd8] hover:bg-[#2b6dc8] text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>{isStarting ? 'Starting...' : 'Start Monitoring'}</span>
-            </button>
-          )}
-
+          {/* Bell toggle */}
           <button
             type="button"
             onClick={handleToggleDesktopNotifications}
-            className={`p-2 rounded-lg border text-xs transition-colors ${
+            className={`p-2 rounded-lg border text-xs transition-colors self-start sm:self-auto ${
               preferences.desktop_notifications
                 ? 'bg-[#3b7dd8]/20 border-[#3b7dd8] text-[#3b7dd8]'
                 : 'bg-[#111620] border-[#1e2736] text-[#8b96a8] hover:text-[#e8edf5]'
             }`}
-            title={
-              preferences.desktop_notifications
-                ? 'Desktop Threat Alerts Active'
-                : 'Enable Desktop Threat Alerts'
-            }
+            title={preferences.desktop_notifications ? 'Desktop Alerts Active' : 'Enable Desktop Alerts'}
           >
             <Bell className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Row 2: Fix #2 — labelled session selector + contextual info + start/stop */}
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <label className="text-[10px] font-semibold text-[#4e5a6b] uppercase tracking-widest">
+              Analysis Session
+            </label>
+            <select
+              value={selectedJobId}
+              onChange={(e) => setSelectedJobId(e.target.value)}
+              disabled={isSessionActive || isLoadingJobs}
+              className="w-full px-3 py-1.5 rounded-lg bg-[#111620] border border-[#1e2736] text-xs text-[#e8edf5] focus:outline-none focus:border-[#3b7dd8] disabled:opacity-50 truncate"
+            >
+              {isLoadingJobs ? (
+                <option>Loading sessions…</option>
+              ) : jobs.length === 0 ? (
+                <option value="">No analysis sessions available</option>
+              ) : (
+                jobs.map((job) => (
+                  <option key={job.id} value={job.id}>
+                    #{job.id.slice(0, 8)} · {job.camera?.name ?? 'No Camera'} · {job.original_filename} · {job.status}
+                  </option>
+                ))
+              )}
+            </select>
+            {/* Contextual session info (Fix #8) */}
+            {selectedJob && (
+              <p className="text-[10px] text-[#4e5a6b] truncate">
+                Camera: <span className="text-[#8b96a8]">{selectedJob.camera?.name ?? '—'}</span>
+                {selectedJob.camera?.location ? (
+                  <>&nbsp;·&nbsp;Location: <span className="text-[#8b96a8]">{selectedJob.camera.location}</span></>
+                ) : null}
+                &nbsp;·&nbsp;Status: <span className="text-[#8b96a8]">{selectedJob.status}</span>
+              </p>
+            )}
+            {!selectedJobId && !isLoadingJobs && (
+              <p className="text-[10px] text-amber-400">Select a session to enable monitoring.</p>
+            )}
+          </div>
+
+          {/* Start / Stop button */}
+          {isSessionActive ? (
+            <button
+              type="button"
+              disabled={isStopping}
+              onClick={handleStopMonitoring}
+              className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 shrink-0"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
+              <span>{isStopping ? 'Stopping…' : 'Stop Monitoring'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={isStarting || !selectedJobId || jobs.length === 0}
+              onClick={handleStartMonitoring}
+              className="px-3.5 py-1.5 rounded-lg bg-[#3b7dd8] hover:bg-[#2b6dc8] text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 shrink-0"
+              title={!selectedJobId ? 'Select a session first' : undefined}
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>{isStarting ? 'Starting…' : '▶ Start Monitoring'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* KPI Telemetry Banner */}
+      {/* ── KPI Telemetry Banner (Fix #3 #4) ── */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <MetricCard
           label="Processing FPS"
@@ -378,10 +427,11 @@ export default function RealtimeMonitoringPage() {
           iconBg="rgba(59,125,216,0.1)"
         />
 
+        {/* Fix #4 — VIDEO TIME, formatted HH:MM:SS */}
         <MetricCard
-          label="Stream Timestamp"
-          value={metrics?.current_timestamp !== undefined ? `${metrics.current_timestamp.toFixed(1)}s` : '0.0s'}
-          subtext="Elapsed playback"
+          label="Video Time"
+          value={metrics?.current_timestamp !== undefined ? formatVideoTime(metrics.current_timestamp) : '00:00:00'}
+          subtext="Playback position"
           icon={Clock}
           iconColor="#06b6d4"
           iconBg="rgba(6,182,212,0.1)"
@@ -396,17 +446,19 @@ export default function RealtimeMonitoringPage() {
           iconBg="rgba(139,92,246,0.1)"
         />
 
+        {/* Fix #3 — ACTIVE TRACKS */}
         <MetricCard
-          label="Active Targets"
+          label="Active Tracks"
           value={metrics?.active_tracks ?? 0}
-          subtext="Tracked objects in scene"
+          subtext="ByteTrack objects in scene"
           icon={Sliders}
           iconColor="#10b981"
           iconBg="rgba(16,185,129,0.1)"
         />
 
+        {/* Fix #3 — OPEN SECURITY EVENTS */}
         <MetricCard
-          label="Open Threats"
+          label="Open Security Events"
           value={openEventsCount}
           subtext={`${highThreatsCount} high / critical`}
           icon={Shield}
@@ -415,10 +467,33 @@ export default function RealtimeMonitoringPage() {
         />
       </div>
 
-      {/* Main SOC Operations Console Grid */}
+      {/* Fix #5 — Stopped / empty state banner */}
+      {!isSessionActive && !selectedJobId && (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[#1e2736] bg-[#111620] py-10 text-center">
+          <Shield className="w-8 h-8 text-[#4e5a6b]" />
+          <p className="text-sm font-semibold text-[#e8edf5]">NO ACTIVE MONITORING SESSION</p>
+          <p className="text-xs text-[#8b96a8] max-w-xs">
+            Select an active video analysis session to begin real-time security monitoring.
+          </p>
+        </div>
+      )}
+
+      {/* ── Main SOC Operations Console (Fix #6 #8 #9) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Live Frame Preview & Active Tracks List */}
+        {/* Left: Live Frame Preview + Active Tracks */}
         <div className="lg:col-span-7 space-y-4">
+          {/* Fix #8 — monitoring context when active */}
+          {isSessionActive && selectedJob && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-2 rounded-lg bg-[#111620] border border-[#1e2736] text-[11px] text-[#8b96a8]">
+              <span>Camera: <span className="text-[#e8edf5]">{selectedJob.camera?.name ?? '—'}</span></span>
+              {selectedJob.camera?.location && (
+                <span>Location: <span className="text-[#e8edf5]">{selectedJob.camera.location}</span></span>
+              )}
+              <span>Analysis: <span className="text-[#e8edf5] font-mono">#{selectedJob.id.slice(0, 8)}</span></span>
+              <span>Status: <span className="text-emerald-400 font-semibold">{sessionStatus}</span></span>
+            </div>
+          )}
+
           <LiveFramePreview
             frameUrl={previewFrameUrl}
             status={sessionStatus}
@@ -432,23 +507,45 @@ export default function RealtimeMonitoringPage() {
           <ActiveTracksList tracks={metrics?.active_tracks_list || []} />
         </div>
 
-        {/* Right Column: Live Event Stream Feed */}
+        {/* Right: Live Security Events Feed + Escalation legend */}
         <div className="lg:col-span-5 space-y-4">
-          <LiveEventFeed
-            events={events}
-            onUpdateStatus={handleUpdateEventStatus}
-            updatingEventId={updatingEventId}
-          />
+          {/* Fix #6 — correct feed header based on session state */}
+          <div className="p-3 rounded-xl bg-[#111620] border border-[#1e2736]">
+            <div className="flex items-center justify-between mb-3">
+              {/* Fix #3 — LIVE SECURITY EVENTS terminology */}
+              <span className="text-xs font-semibold text-[#e8edf5] uppercase tracking-wider">
+                {isSessionActive
+                  ? `Live Security Events · ${openEventsCount}`
+                  : 'Security Events'}
+              </span>
+              {!isSessionActive && (
+                <span className="text-[10px] text-[#4e5a6b]">No monitoring session active</span>
+              )}
+              {isSessionActive && (
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  LIVE
+                </span>
+              )}
+            </div>
+            <LiveEventFeed
+              events={events}
+              onUpdateStatus={handleUpdateEventStatus}
+              updatingEventId={updatingEventId}
+            />
+          </div>
 
-          {/* Incident Response Policy Legend */}
+          {/* Fix #9 — concise escalation copy */}
           <div className="p-3.5 rounded-xl bg-[#111620] border border-[#1e2736] text-[11px] text-[#8b96a8] space-y-2">
-            <div className="flex items-center gap-1.5 font-semibold text-[#e8edf5]">
+            <div className="flex items-center gap-1.5 font-semibold text-[#e8edf5] uppercase tracking-wider text-[10px]">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#3b7dd8]" />
-              <span>SOC Escalation Protocol</span>
+              Alert Escalation
             </div>
             <p className="leading-relaxed">
-              New threat events trigger real-time toast alerts and desktop notifications based on configured rule severities. 
-              Operators can directly Acknowledge or Resolve incidents above to update threat status across all operational feeds.
+              High and critical security events trigger real-time operator notifications.
+            </p>
+            <p className="leading-relaxed">
+              Operators can acknowledge or resolve events directly from the event feed.
             </p>
           </div>
         </div>

@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
   { label: 'Analysis',        href: '/dashboard/analysis',       icon: Film,            implemented: true },
   { label: 'Security Rules',  href: '/dashboard/rules',          icon: Sliders,         implemented: true },
   { label: 'Security Zones',  href: '/dashboard/zones',          icon: Maximize2,       implemented: true },
-  { label: 'Incident Intel',  href: '/dashboard/incidents',      icon: Brain,           implemented: true },
+  { label: 'Incident Intelligence', href: '/dashboard/incidents',      icon: Brain,           implemented: true },
   { label: 'Analytics',       href: '/dashboard/analytics',      icon: BarChart2,       implemented: true },
   { label: 'Settings',        href: '/dashboard/settings',       icon: Settings,        implemented: false },
 ];
@@ -109,7 +109,7 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="px-5 py-4 border-t border-[#1e2736]">
-        <p className="text-[10px] text-[#4e5a6b]">Phase 9 · Advanced Analytics</p>
+        <p className="text-[10px] font-semibold text-[#8b96a8]">SentinelAI</p>
         <p className="text-[10px] text-[#4e5a6b] mt-0.5">v0.9.0</p>
       </div>
     </aside>
