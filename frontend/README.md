@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛡️ SentinelAI — Frontend SOC Dashboard
 
-## Getting Started
+A modern, high-performance Security Operations Center (SOC) dashboard built with **Next.js 14** (App Router), **TypeScript**, and **Tailwind CSS**.
 
-First, run the development server:
+---
 
+## 🌐 Live Deployments
+
+| Component | Production URL | Description |
+| :--- | :--- | :--- |
+| **Frontend Web Console** | 🔗 **[https://sentinel-ai-olive.vercel.app/](https://sentinel-ai-olive.vercel.app/)** | Live Next.js 14 SOC Dashboard on Vercel |
+| **Backend API Service** | 🔗 **[https://sentinelai-backend-s3cz.onrender.com](https://sentinelai-backend-s3cz.onrender.com)** | Live FastAPI Backend & WebSocket Stream on Render |
+| **Interactive API Docs** | 🔗 **[https://sentinelai-backend-s3cz.onrender.com/docs](https://sentinelai-backend-s3cz.onrender.com/docs)** | OpenAPI Swagger Documentation |
+
+> [!TIP]
+> **Cold Starts**: Render free/starter instances may take 30–50 seconds to spin up on cold start after a period of inactivity.
+
+---
+
+## 🚀 Getting Started Locally
+
+### 1. Prerequisites
+- Node.js 18.17+ or 20+
+- Running SentinelAI Backend (locally on `http://localhost:8000` or using the production backend)
+
+### 2. Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Configure Environment Variables
+Create or edit `.env.local`:
+```env
+# Point to local FastAPI backend or live cloud backend
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+For live backend connection during local development:
+```env
+NEXT_PUBLIC_API_URL=https://sentinelai-backend-s3cz.onrender.com
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Run Development Server
+```bash
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000) with your browser to access the SentinelAI SOC Operations Console.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📦 Build for Production
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# Build production bundle
+npm run build
 
-## Deploy on Vercel
+# Run production server
+npm start
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📁 Key Application Routes
+
+- `/login` — Operator authentication & JWT management
+- `/register` — Account creation
+- `/dashboard` — SOC Overview & quick metrics
+- `/dashboard/cameras` — Camera stream management (RTSP, Webcam, HTTP)
+- `/dashboard/analysis` — Video processing, YOLOv11 detections & ByteTrack trajectory viewer
+- `/dashboard/zones` — Spatial polygonal restricted zones setup
+- `/dashboard/rules` — Threat detection rule engine (Intrusion, Loitering, Crowd Density)
+- `/dashboard/monitoring` — Real-time WebSocket surveillance telemetry & audible alert stream
+- `/dashboard/incidents` — AI-synthesized incident reports & operator triage
+- `/dashboard/analytics` — Historical security heatmaps, risk scores & statistical anomaly spikes

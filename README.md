@@ -4,6 +4,8 @@
 
 ### **AI-Powered Intelligent Surveillance & Threat Detection Platform**
 
+[![Live Frontend Demo](https://img.shields.io/badge/Live_Demo-Frontend-00C7B7.svg?style=for-the-badge&logo=vercel&logoColor=white)](https://sentinel-ai-olive.vercel.app/)
+[![Live Backend API](https://img.shields.io/badge/Live_API-Backend-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://sentinelai-backend-s3cz.onrender.com/docs)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Next.js 14](https://img.shields.io/badge/Next.js_14-App_Router-black.svg?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -16,6 +18,7 @@
   <b>A production-grade, full-stack Security Operations Center (SOC) platform combining edge-ready computer vision, YOLOv11 object detection, ByteTrack multi-object tracking, real-time WebSocket telemetry, rule-based threat classification, GenAI-assisted incident intelligence, and historical security analytics.</b>
 </p>
 
+[🌐 Live Deployments](#-live-deployments--demo-links) •
 [System Architecture](#-system-architecture) •
 [Data Flow](#-complete-surveillance-data-flow) •
 [Features](#-key-capabilities-phases-110) •
@@ -27,6 +30,24 @@
 ---
 
 </div>
+
+## 🌐 Live Deployments & Demo Links
+
+SentinelAI is deployed live in production:
+
+| Service / Resource | Target Link | Status & Details |
+| :--- | :--- | :--- |
+| **Frontend Web Console** | 🔗 **[https://sentinel-ai-olive.vercel.app/](https://sentinel-ai-olive.vercel.app/)** | Real-time Dark SOC dashboard (Next.js 14, TypeScript, Tailwind CSS on Vercel) |
+| **Backend API Service** | 🔗 **[https://sentinelai-backend-s3cz.onrender.com](https://sentinelai-backend-s3cz.onrender.com)** | Core FastAPI backend, computer vision pipeline, and WebSocket gateway on Render |
+| **Interactive API Docs (Swagger UI)** | 🔗 **[https://sentinelai-backend-s3cz.onrender.com/docs](https://sentinelai-backend-s3cz.onrender.com/docs)** | Test live endpoints, inspect schemas, and authorize JWT sessions |
+| **API Schema (ReDoc)** | 🔗 **[https://sentinelai-backend-s3cz.onrender.com/redoc](https://sentinelai-backend-s3cz.onrender.com/redoc)** | Clean specification view of all endpoints and models |
+| **Health Liveness Probe** | 🔗 **[https://sentinelai-backend-s3cz.onrender.com/api/health](https://sentinelai-backend-s3cz.onrender.com/api/health)** | Live service uptime, version info, and operational health |
+| **Live WebSocket Endpoint** | `wss://sentinelai-backend-s3cz.onrender.com/api/ws/analysis/{job_id}` | Authenticated real-time streaming channel for alerts & telemetry |
+
+> [!TIP]
+> **Cold Start Note**: Render free/starter instances automatically hibernate after periods of inactivity. If accessing the live backend after idle time, please allow 30–50 seconds for the cloud backend to complete its initial cold start.
+
+---
 
 ## 📌 Executive Summary
 
@@ -204,15 +225,15 @@ The fastest way to deploy the entire SentinelAI stack (PostgreSQL + FastAPI + Ne
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/SentinelAI.git
+git clone https://github.com/kedarsoni04/SentinelAI.git
 cd SentinelAI
 ```
 
 ### 2. Configure Environment (Optional)
-The default `docker-compose.yml` runs out-of-the-box with pre-configured production defaults:
-- **Frontend**: `http://localhost:3000`
-- **Backend API**: `http://localhost:8000`
-- **API Documentation**: `http://localhost:8000/docs`
+The default `docker-compose.yml` runs out-of-the-box with pre-configured development defaults:
+- **Frontend**: `http://localhost:3000` (Production Live: [sentinel-ai-olive.vercel.app](https://sentinel-ai-olive.vercel.app/))
+- **Backend API**: `http://localhost:8000` (Production Live: [sentinelai-backend-s3cz.onrender.com](https://sentinelai-backend-s3cz.onrender.com))
+- **API Documentation**: `http://localhost:8000/docs` (Production Live: [sentinelai-backend-s3cz.onrender.com/docs](https://sentinelai-backend-s3cz.onrender.com/docs))
 - **PostgreSQL**: `localhost:5432`
 
 ### 3. Build & Launch Containers
@@ -319,6 +340,11 @@ alembic downgrade -1
 
 ## 📋 API Reference
 
+- **Production API Base**: `https://sentinelai-backend-s3cz.onrender.com`
+- **Interactive Swagger UI**: [https://sentinelai-backend-s3cz.onrender.com/docs](https://sentinelai-backend-s3cz.onrender.com/docs)
+- **ReDoc Schema Explorer**: [https://sentinelai-backend-s3cz.onrender.com/redoc](https://sentinelai-backend-s3cz.onrender.com/redoc)
+- **Local API Base**: `http://localhost:8000`
+
 | Group | Method | Endpoint | Description | Auth Required |
 |---|---|---|---|:---:|
 | **Health** | `GET` | `/api/health` | Liveness probe & uptime | No |
@@ -374,7 +400,10 @@ All 47 tests execute against SQLite in-memory/test fixtures, running in under 10
 
 To demonstrate the full end-to-end capabilities of SentinelAI to recruiters or engineering interviewers:
 
-1. **Access SOC Portal**: Navigate to `http://localhost:3000/login` and log in with operator credentials.
+> [!NOTE]
+> You can test either on the **Live Production Deployment** at **[https://sentinel-ai-olive.vercel.app/](https://sentinel-ai-olive.vercel.app/)** or locally on `http://localhost:3000`.
+
+1. **Access SOC Portal**: Navigate to `https://sentinel-ai-olive.vercel.app/login` (or `http://localhost:3000/login`) and log in with operator credentials.
 2. **Camera Inventory**: Open **Cameras** (`/dashboard/cameras`) to inspect registered RTSP and webcam sources.
 3. **Upload Surveillance Footage**: In **Video Analysis** (`/dashboard/analysis`), upload a security test video (`.mp4`).
 4. **Inspect YOLO Detection**: View real-time progress. Upon completion, open the job to review category breakdowns (Persons vs. Vehicles) and bounding boxes in the Frame Inspector.

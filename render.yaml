@@ -40,7 +40,7 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 120
       - key: CORS_ORIGINS
-        value: "https://sentinelai-frontend.onrender.com"
+        value: "https://sentinel-ai-olive.vercel.app,https://sentinelai-frontend.onrender.com"
       - key: VIDEO_STORAGE_PATH
         value: /app/storage
       - key: MAX_VIDEO_SIZE_MB
