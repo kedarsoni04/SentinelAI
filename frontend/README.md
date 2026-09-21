@@ -15,6 +15,13 @@ A modern, high-performance Security Operations Center (SOC) dashboard built with
 > [!TIP]
 > **Cold Starts**: Render free/starter instances may take 30–50 seconds to spin up on cold start after a period of inactivity.
 
+### 🔑 Demo Credentials
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Administrator** | `admin@sentinelai.io` | `Admin123!` |
+| **Security Operator** | `operator@sentinelai.io` | `Operator123!` |
+
 ---
 
 ## 🚀 Getting Started Locally

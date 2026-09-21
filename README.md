@@ -47,6 +47,15 @@ SentinelAI is deployed live in production:
 > [!TIP]
 > **Cold Start Note**: Render free/starter instances automatically hibernate after periods of inactivity. If accessing the live backend after idle time, please allow 30–50 seconds for the cloud backend to complete its initial cold start.
 
+### 🔑 Demo Credentials
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Administrator** | `admin@sentinelai.io` | `Admin123!` |
+| **Security Operator** | `operator@sentinelai.io` | `Operator123!` |
+
+*(You can also register a custom account directly at [https://sentinel-ai-olive.vercel.app/register](https://sentinel-ai-olive.vercel.app/register))*
+
 ---
 
 ## 📌 Executive Summary

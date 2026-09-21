@@ -55,7 +55,7 @@ export default function RegisterPage() {
     try {
       await register({
         name: name.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password,
       });
       setSuccess(true);

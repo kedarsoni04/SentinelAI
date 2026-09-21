@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
@@ -15,7 +16,8 @@ def register_user(db: Session, data: UserRegister) -> UserResponse:
     Raises:
         409 CONFLICT — if email is already registered.
     """
-    existing = db.query(User).filter(User.email == data.email).first()
+    clean_email = data.email.strip().lower()
+    existing = db.query(User).filter(func.lower(User.email) == clean_email).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -23,8 +25,8 @@ def register_user(db: Session, data: UserRegister) -> UserResponse:
         )
 
     user = User(
-        name=data.name,
-        email=data.email,
+        name=data.name.strip(),
+        email=clean_email,
         password_hash=hash_password(data.password),
         role=UserRole.SECURITY_OPERATOR,
     )
@@ -41,13 +43,14 @@ def authenticate_user(db: Session, email: str, password: str) -> TokenResponse:
     Raises:
         401 UNAUTHORIZED — if credentials are invalid.
     """
-    user = db.query(User).filter(User.email == email).first()
+    clean_email = email.strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == clean_email).first()
 
     # Use a constant-time comparison path to prevent user enumeration
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid email or password. If you haven't registered on this deployment yet, please create an account first.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

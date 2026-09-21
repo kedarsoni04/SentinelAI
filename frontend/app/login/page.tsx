@@ -38,7 +38,7 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      await login({ email: email.trim(), password });
+      await login({ email: email.trim().toLowerCase(), password });
       router.push('/dashboard');
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -79,11 +79,39 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* Quick Demo Access */}
+          <div className="mb-5 p-3 rounded-lg bg-[#161c28] border border-[#1e2736] flex items-center justify-between text-xs">
+            <div>
+              <span className="text-[#8b96a8] block font-medium">Demo Operator:</span>
+              <span className="text-[#3b7dd8] font-mono">admin@sentinelai.io</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('admin@sentinelai.io');
+                setPassword('Admin123!');
+                setError(null);
+              }}
+              className="px-2.5 py-1 text-xs font-semibold rounded bg-[#1e2736] hover:bg-[#283548] text-[#e8edf5] hover:text-white border border-[#2b374a] transition-colors"
+            >
+              Fill Demo
+            </button>
+          </div>
+
           {/* Error Banner */}
           {error && (
-            <div className="flex items-start gap-2.5 bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] rounded-lg px-4 py-3 mb-5">
-              <AlertCircle className="w-4 h-4 text-[#ef4444] mt-0.5 shrink-0" />
-              <p className="text-sm text-[#ef4444]">{error}</p>
+            <div className="bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.2)] rounded-lg p-3.5 mb-5 space-y-1.5">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-[#ef4444] mt-0.5 shrink-0" />
+                <p className="text-sm text-[#ef4444] leading-snug">{error}</p>
+              </div>
+              <p className="text-xs text-[#8b96a8] pl-6">
+                Tip: If you haven&apos;t registered on this cloud deployment yet, please{' '}
+                <Link href="/register" className="text-[#3b7dd8] underline hover:text-[#4d8fe8]">
+                  create an account
+                </Link>{' '}
+                first or use the Demo Operator above.
+              </p>
             </div>
           )}
 

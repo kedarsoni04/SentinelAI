@@ -78,6 +78,42 @@ def sync_database_schema():
             except Exception:
                 pass
 
+    # Ensure default demo / operator accounts exist
+    seed_initial_users()
+
+
+def seed_initial_users():
+    """
+    Ensure standard demo and admin accounts exist for immediate out-of-the-box access
+    across both local development and newly deployed cloud environments.
+    """
+    from sqlalchemy.orm import Session
+    from sqlalchemy import func
+    from app.models.user import User, UserRole
+    from app.core.security import hash_password
+
+    seeds = [
+        ("Admin Operator", "admin@sentinelai.io", "Admin123!", UserRole.ADMIN),
+        ("SOC Operator", "operator@sentinelai.io", "Operator123!", UserRole.SECURITY_OPERATOR),
+    ]
+
+    try:
+        with Session(engine) as db:
+            for name, email, password, role in seeds:
+                clean_email = email.strip().lower()
+                existing = db.query(User).filter(func.lower(User.email) == clean_email).first()
+                if not existing:
+                    new_user = User(
+                        name=name,
+                        email=clean_email,
+                        password_hash=hash_password(password),
+                        role=role,
+                    )
+                    db.add(new_user)
+            db.commit()
+    except Exception as e:
+        logger.warning("Could not complete initial user seeding: %s", e)
+
 
 import logging
 from app.core.logging import setup_logging

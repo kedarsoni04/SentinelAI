@@ -24,11 +24,22 @@ class UserRegister(BaseModel):
         return v.strip()
 
 
+    @field_validator("email")
+    @classmethod
+    def email_normalize(cls, v: str) -> str:
+        return str(v).strip().lower()
+
+
 class UserLogin(BaseModel):
     """Schema for user login requests."""
 
     email: EmailStr = Field(..., description="Registered email address")
     password: str = Field(..., description="Account password")
+
+    @field_validator("email")
+    @classmethod
+    def email_normalize(cls, v: str) -> str:
+        return str(v).strip().lower()
 
 
 # ─── Response Schemas ────────────────────────────────────────────────────────
