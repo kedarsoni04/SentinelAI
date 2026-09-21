@@ -47,7 +47,7 @@ def authenticate_user(db: Session, email: str, password: str) -> TokenResponse:
     user = db.query(User).filter(func.lower(User.email) == clean_email).first()
 
     # Use a constant-time comparison path to prevent user enumeration
-    if not user or not verify_password(password, user.password_hash):
+    if not user or not verify_password(password, str(user.password_hash)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password. If you haven't registered on this deployment yet, please create an account first.",
