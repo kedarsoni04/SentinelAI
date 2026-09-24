@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from app.models.analysis_job import JobStatus
+from app.schemas.camera import CameraResponse
 
 
 # ─── Response Schemas ─────────────────────────────────────────────────────────
@@ -12,11 +13,16 @@ from app.models.analysis_job import JobStatus
 class AnalysisJobCreateResponse(BaseModel):
     """Initial response returned upon video upload."""
 
-    id: str
-    status: JobStatus
-    original_filename: str
-    progress: int = 0
-    message: str = "Video uploaded successfully and queued for analysis."
+    id: str = Field(..., description="Unique analysis job UUID")
+    status: JobStatus = Field(..., description="Initial job status (typically QUEUED)")
+    original_filename: str = Field(..., description="Original uploaded filename")
+    progress: int = Field(0, ge=0, le=100, description="Processing progress percentage (0-100)")
+    message: str = Field(
+        "Video uploaded successfully and queued for analysis.",
+        description="User-friendly status confirmation message",
+    )
+
+    model_config = {"from_attributes": True}
 
 
 class AnalysisJobResponse(BaseModel):
@@ -28,10 +34,10 @@ class AnalysisJobResponse(BaseModel):
     id: str
     user_id: str
     camera_id: Optional[str] = None
-    source_type: str
+    source_type: str = "VIDEO_FILE"
     original_filename: str
     status: JobStatus
-    progress: int
+    progress: int = Field(0, ge=0, le=100)
     duration_seconds: Optional[float] = None
     fps: Optional[float] = None
     frame_count: Optional[int] = None
@@ -43,6 +49,7 @@ class AnalysisJobResponse(BaseModel):
     completed_at: Optional[datetime] = None
     created_at: datetime
     error_message: Optional[str] = None
+    camera: Optional[CameraResponse] = None
 
     model_config = {"from_attributes": True}
 
@@ -72,6 +79,17 @@ class AnalysisResultResponse(BaseModel):
 class ActiveJobsCountResponse(BaseModel):
     """Count of active analysis jobs for the SOC dashboard."""
 
-    active_jobs: int
-    queued: int
-    processing: int
+    active_jobs: int = Field(..., ge=0, description="Total active (queued + processing) jobs")
+    queued: int = Field(..., ge=0, description="Count of queued jobs")
+    processing: int = Field(..., ge=0, description="Count of currently processing jobs")
+
+    model_config = {"from_attributes": True}
+
+
+__all__ = [
+    "JobStatus",
+    "AnalysisJobCreateResponse",
+    "AnalysisJobResponse",
+    "AnalysisResultResponse",
+    "ActiveJobsCountResponse",
+]
