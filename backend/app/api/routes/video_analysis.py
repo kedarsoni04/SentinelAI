@@ -113,6 +113,12 @@ def get_current_user_for_media(
     status_code=status.HTTP_201_CREATED,
     summary="Upload video and queue background analysis",
 )
+@router.post(
+    "/upload/",
+    response_model=AnalysisJobCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 def upload_video(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
@@ -148,6 +154,11 @@ def upload_video(
     "",
     response_model=List[AnalysisJobResponse],
     summary="List analysis jobs for current user",
+)
+@router.get(
+    "/",
+    response_model=List[AnalysisJobResponse],
+    include_in_schema=False,
 )
 def list_analysis_jobs(
     current_user: UserResponse = Depends(get_current_user),

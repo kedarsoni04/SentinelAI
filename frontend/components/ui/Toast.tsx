@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle, AlertCircle, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error';
@@ -78,14 +78,20 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
 export function useToast() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const showToast = (type: ToastType, message: string) => {
-    const id = Math.random().toString(36).slice(2);
-    setToasts((prev) => [...prev, { id, type, message }]);
-  };
+  const showToast = useCallback((type: ToastType, message: string) => {
+    setToasts((prev) => {
+      // Deduplicate: ignore if identical type and message is already active
+      if (prev.some((t) => t.type === type && t.message === message)) {
+        return prev;
+      }
+      const id = Math.random().toString(36).slice(2);
+      return [...prev, { id, type, message }];
+    });
+  }, []);
 
-  const dismissToast = (id: string) => {
+  const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, []);
 
   return { toasts, showToast, dismissToast };
 }

@@ -46,11 +46,17 @@ def authenticate_user(db: Session, email: str, password: str) -> TokenResponse:
     clean_email = email.strip().lower()
     user = db.query(User).filter(func.lower(User.email) == clean_email).first()
 
-    # Use a constant-time comparison path to prevent user enumeration
-    if not user or not verify_password(password, str(user.password_hash)):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password. If you haven't registered on this deployment yet, please create an account first.",
+            detail="No account found with this email address. If you are on a new deployment or the service restarted, please create an account first.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not verify_password(password, str(user.password_hash)):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password. Please check your password and try again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

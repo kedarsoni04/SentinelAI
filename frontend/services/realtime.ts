@@ -6,12 +6,38 @@ import type {
   RealtimeSessionMetrics,
 } from '@/types';
 
+/**
+ * Returns the direct FastAPI backend URL.
+ * Used for WebSocket connections and authenticated media URLs — both must
+ * bypass the Next.js rewrite proxy and connect to the backend directly.
+ */
+export function getBackendBaseUrl(): string {
+  const raw = (process.env.NEXT_PUBLIC_API_URL || '').trim();
+
+  if (raw) {
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    if (!raw.startsWith('/')) return `https://${raw}`;
+  }
+
+  // Non-localhost browser → Render production backend
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return 'https://sentinelai-backend-s3cz.onrender.com';
+  }
+
+  return 'http://localhost:8000';
+}
+
 export function getWebSocketBaseUrl(): string {
-  const apiUrl = getApiBaseUrl();
+  const apiUrl = getBackendBaseUrl();
   if (apiUrl.startsWith('https://')) return apiUrl.replace('https://', 'wss://');
   if (apiUrl.startsWith('http://')) return apiUrl.replace('http://', 'ws://');
   return `wss://${apiUrl}`;
 }
+
 
 /**
  * Start real-time monitoring session for a video analysis job.
@@ -47,9 +73,11 @@ export async function getActiveMonitoringSessions(): Promise<RealtimeSessionMetr
 
 /**
  * Construct authenticated preview frame URL for real-time monitoring.
+ * Uses the direct backend URL (not the Next.js proxy) because the token
+ * is passed as a query parameter for <img> tag compatibility.
  */
 export function getRealtimeFrameUrl(jobId: string, timestamp?: number): string {
-  const baseUrl = getApiBaseUrl();
+  const baseUrl = getBackendBaseUrl();
   const token = getStoredToken();
   const tsParam = timestamp ? `&ts=${timestamp}` : `&_t=${Date.now()}`;
   return `${baseUrl}/api/video-analysis/${jobId}/realtime/frame?token=${encodeURIComponent(token || '')}${tsParam}`;

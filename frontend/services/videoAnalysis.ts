@@ -1,4 +1,5 @@
 import api from './api';
+import { getBackendBaseUrl } from './realtime';
 import { getStoredToken } from './auth';
 import type {
   ActiveJobsCount,
@@ -29,8 +30,9 @@ export async function uploadVideo(
 
   const response = await api.post<UploadResponse>('/api/video-analysis/upload', formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',
+      'Content-Type': undefined, // Let Axios/browser automatically inject multipart boundary
     },
+    timeout: 600000, // 10 minutes for large surveillance video uploads (up to 250MB)
     onUploadProgress,
   });
   return response.data;
@@ -94,9 +96,11 @@ export async function getFrameDetections(jobId: string, resultId: string): Promi
 
 /**
  * Constructs an authenticated absolute media URL for an extracted frame, thumbnail, or annotated frame.
+ * Uses the direct backend URL (bypassing the Next.js proxy) because these URLs carry
+ * the JWT as a query parameter and are used in <img> src attributes.
  */
 export function getAuthenticatedFrameUrl(relativeUrl: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const baseUrl = getBackendBaseUrl();
   const token = getStoredToken();
   const separator = relativeUrl.includes('?') ? '&' : '?';
   const tokenQuery = token ? `${separator}token=${encodeURIComponent(token)}` : '';

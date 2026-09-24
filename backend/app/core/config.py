@@ -103,10 +103,18 @@ class Settings(BaseSettings):
     def sync_database_url(self) -> str:
         """
         Ensures PostgreSQL URLs use postgresql+psycopg2 driver for SQLAlchemy 2.x compatibility.
+        Handles both postgres:// (Render/Heroku/Supabase) and postgresql:// prefixes.
+        If SQLite is used and /app/storage persistent disk is available, stores the db there
+        to prevent data wipe on ephemeral container spin-downs.
         """
-        url = self.DATABASE_URL
-        if url.startswith("postgresql://"):
+        import os
+        url = self.DATABASE_URL.strip()
+        if url.startswith("postgres://"):
+            return url.replace("postgres://", "postgresql+psycopg2://", 1)
+        if url.startswith("postgresql://") and not url.startswith("postgresql+"):
             return url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        if (url == "sqlite:///./sentinel.db" or url == "sqlite:///sentinel.db") and os.path.isdir("/app/storage"):
+            return "sqlite:////app/storage/sentinel.db"
         return url
 
     @property

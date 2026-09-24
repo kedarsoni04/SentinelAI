@@ -10,20 +10,41 @@ import { clearAuthData, getStoredToken } from './auth';
 
 /**
  * Normalizes the API base URL.
- * If NEXT_PUBLIC_API_URL lacks a protocol (e.g. Render's property: host providing host without https://),
- * it safely prefixes https://.
+ *
+ * Resolution order:
+ * 1. NEXT_PUBLIC_API_URL env var (set in .env.local or Vercel/Render dashboard).
+ * 2. If running in a browser on a non-localhost origin, use the Render production
+ *    backend URL automatically — so Vercel deployments work without manual config.
+ * 3. Fall back to http://localhost:8000 for local development.
+ *
+ * If the env var is set but lacks a protocol (Render sometimes supplies host-only),
+ * https:// is prepended automatically.
  */
 export function getApiBaseUrl(): string {
   const raw = (process.env.NEXT_PUBLIC_API_URL || '').trim();
-  if (!raw) return 'http://localhost:8000';
-  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/')) {
-    return raw;
+
+  if (raw) {
+    if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/')) {
+      return raw;
+    }
+    return `https://${raw}`;
   }
-  return `https://${raw}`;
+
+  // Auto-detect production: if running in a browser on a non-localhost origin,
+  // default to the Render backend rather than localhost (which is always unreachable).
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return 'https://sentinelai-backend-s3cz.onrender.com';
+  }
+
+  return 'http://localhost:8000';
 }
 
 const api = axios.create({
-  baseURL: getApiBaseUrl(),
+  baseURL: '',          // resolved dynamically in the request interceptor below
   headers: {
     'Content-Type': 'application/json',
   },
@@ -35,11 +56,21 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
+    // Dynamically resolve the base URL on each request so the runtime window
+    // check in getApiBaseUrl() correctly detects non-localhost origins.
+    if (!config.baseURL && config.url && !config.url.startsWith('http')) {
+      config.url = `${getApiBaseUrl()}${config.url}`;
+    }
+
     if (typeof window !== 'undefined') {
       const token = getStoredToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+    }
+    // For FormData requests, remove explicit Content-Type to let browser/Axios compute boundary
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },
@@ -52,7 +83,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
-    if (error.code === 'ECONNABORTED' || !error.response) {
+    if (error.code === 'ECONNABORTED') {
+      return Promise.reject(
+        new Error(
+          'Request timed out while communicating with SentinelAI services. The backend may be spinning up from sleep; please try again.'
+        )
+      );
+    }
+
+    if (!error.response) {
       return Promise.reject(
         new Error(
           'Unable to connect to SentinelAI services. Please check your connection and try again.'

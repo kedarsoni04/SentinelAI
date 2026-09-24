@@ -105,13 +105,15 @@ export default function LoginPage() {
                 <AlertCircle className="w-4 h-4 text-[#ef4444] mt-0.5 shrink-0" />
                 <p className="text-sm text-[#ef4444] leading-snug">{error}</p>
               </div>
-              <p className="text-xs text-[#8b96a8] pl-6">
-                Tip: If you haven&apos;t registered on this cloud deployment yet, please{' '}
-                <Link href="/register" className="text-[#3b7dd8] underline hover:text-[#4d8fe8]">
-                  create an account
-                </Link>{' '}
-                first or use the Demo Operator above.
-              </p>
+              {(error.toLowerCase().includes('no account') || error.toLowerCase().includes('deployment')) && (
+                <p className="text-xs text-[#8b96a8] pl-6">
+                  Tip: If you haven&apos;t registered on this cloud deployment yet, please{' '}
+                  <Link href="/register" className="text-[#3b7dd8] underline hover:text-[#4d8fe8]">
+                    create an account
+                  </Link>{' '}
+                  first or use the Demo Operator above.
+                </p>
+              )}
             </div>
           )}
 

@@ -54,6 +54,7 @@ export default function RealtimeMonitoringPage() {
   const [isStopping, setIsStopping] = useState(false);
   const [updatingEventId, setUpdatingEventId] = useState<string | null>(null);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
 
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     desktop_notifications: false,
@@ -64,79 +65,140 @@ export default function RealtimeMonitoringPage() {
   const { toasts, showToast, dismissToast } = useToast();
   const wsClientRef = useRef<RealtimeWebSocketClient | null>(null);
 
-  // Load available analysis jobs
-  const loadJobs = useCallback(async () => {
+  // Lifecyle & retry tracking to prevent infinite fetch loops
+  const isMountedRef = useRef(true);
+  const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
+
+  // Stable references for WebSocket handler to eliminate reconnection churn
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
+  const preferencesRef = useRef(preferences);
+  preferencesRef.current = preferences;
+  const selectedJobIdRef = useRef(selectedJobId);
+  selectedJobIdRef.current = selectedJobId;
+
+  // Load available analysis jobs with bounded retry and single notification
+  const loadJobs = useCallback(async (isManualRefresh = false) => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
+    if (isManualRefresh) {
+      retryCountRef.current = 0;
+      setJobsError(null);
+    }
+
     setIsLoadingJobs(true);
+
     try {
       const data = await getAnalysisJobs();
-      setJobs(data);
-      if (!selectedJobId && data.length > 0) {
-        setSelectedJobId(data[0].id);
-      }
-    } catch {
-      showToast('error', 'Unable to fetch analysis jobs.');
-    } finally {
-      setIsLoadingJobs(false);
-    }
-  }, [selectedJobId, showToast]);
+      if (!isMountedRef.current) return;
 
+      setJobs(data);
+      retryCountRef.current = 0;
+      setJobsError(null);
+
+      // Select first available session if none currently chosen
+      setSelectedJobId((current) => {
+        if (!current && data.length > 0) {
+          return data[0].id;
+        }
+        return current;
+      });
+    } catch {
+      if (!isMountedRef.current) return;
+
+      const errMsg = 'Unable to fetch analysis jobs.';
+      setJobsError(errMsg);
+
+      // Display user-visible notification only on initial failure
+      if (retryCountRef.current === 0) {
+        showToastRef.current('error', errMsg);
+      }
+
+      // Bounded retry with controlled backoff (max 2 retries: 3s, 6s)
+      if (retryCountRef.current < 2) {
+        retryCountRef.current += 1;
+        const delay = retryCountRef.current === 1 ? 3000 : 6000;
+        retryTimerRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            loadJobs(false);
+          }
+        }, delay);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoadingJobs(false);
+      }
+    }
+  }, []);
+
+  // Fetch jobs once on mount, ensure complete timer cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;
     loadJobs();
+
+    return () => {
+      isMountedRef.current = false;
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
   }, [loadJobs]);
 
-  // Handle incoming real-time WebSocket messages
-  const handleWebSocketMessage = useCallback(
-    (msg: RealtimeMessage) => {
-      if (msg.type === 'status_update') {
-        const data = msg.data as unknown as RealtimeSessionMetrics;
-        if (data.status) {
-          setSessionStatus(data.status);
-        }
-        setMetrics(data);
-
-        // Update preview frame if a frame index is available
-        if (data.latest_frame_index !== undefined && data.latest_frame_index !== null) {
-          setPreviewFrameUrl(getRealtimeFrameUrl(data.job_id || selectedJobId, data.current_timestamp));
-        }
-      } else if (msg.type === 'security_event') {
-        const newEvent = msg.data as unknown as SecurityEvent;
-        setEvents((prev) => {
-          if (prev.some((e) => e.id === newEvent.id)) {
-            return prev.map((e) => (e.id === newEvent.id ? newEvent : e));
-          }
-          return [newEvent, ...prev];
-        });
-
-        // Trigger in-app toast based on severity policy
-        if (newEvent.severity === 'CRITICAL' || newEvent.severity === 'HIGH') {
-          showToast('error', `[${newEvent.severity}] ${newEvent.title}`);
-        }
-
-        // Trigger native desktop notification if user opted in
-        if (
-          preferences.desktop_notifications &&
-          typeof window !== 'undefined' &&
-          'Notification' in window &&
-          Notification.permission === 'granted'
-        ) {
-          try {
-            new Notification(`SentinelAI: ${newEvent.title}`, {
-              body: `${newEvent.event_type} (${newEvent.severity}) detected in active surveillance feed.`,
-              icon: '/favicon.ico',
-            });
-          } catch {
-            // Ignore notification failure
-          }
-        }
-      } else if (msg.type === 'event_updated') {
-        const updatedEvent = msg.data as unknown as SecurityEvent;
-        setEvents((prev) =>
-          prev.map((e) => (e.id === updatedEvent.id ? { ...e, ...updatedEvent } : e))
-        );
+  // Handle incoming real-time WebSocket messages — stable memoized handler
+  const handleWebSocketMessage = useCallback((msg: RealtimeMessage) => {
+    if (msg.type === 'status_update') {
+      const data = msg.data as unknown as RealtimeSessionMetrics;
+      if (data.status) {
+        setSessionStatus(data.status);
       }
-    },
-    [selectedJobId, preferences.desktop_notifications, showToast]
-  );
+      setMetrics(data);
+
+      // Update preview frame if a frame index is available
+      if (data.latest_frame_index !== undefined && data.latest_frame_index !== null) {
+        setPreviewFrameUrl(getRealtimeFrameUrl(data.job_id || selectedJobIdRef.current, data.current_timestamp));
+      }
+    } else if (msg.type === 'security_event') {
+      const newEvent = msg.data as unknown as SecurityEvent;
+      setEvents((prev) => {
+        if (prev.some((e) => e.id === newEvent.id)) {
+          return prev.map((e) => (e.id === newEvent.id ? newEvent : e));
+        }
+        return [newEvent, ...prev];
+      });
+
+      // Trigger in-app toast based on severity policy
+      if (newEvent.severity === 'CRITICAL' || newEvent.severity === 'HIGH') {
+        showToastRef.current('error', `[${newEvent.severity}] ${newEvent.title}`);
+      }
+
+      // Trigger native desktop notification if user opted in
+      if (
+        preferencesRef.current.desktop_notifications &&
+        typeof window !== 'undefined' &&
+        'Notification' in window &&
+        Notification.permission === 'granted'
+      ) {
+        try {
+          new Notification(`SentinelAI: ${newEvent.title}`, {
+            body: `${newEvent.event_type} (${newEvent.severity}) detected in active surveillance feed.`,
+            icon: '/favicon.ico',
+          });
+        } catch {
+          // Ignore notification failure
+        }
+      }
+    } else if (msg.type === 'event_updated') {
+      const updatedEvent = msg.data as unknown as SecurityEvent;
+      setEvents((prev) =>
+        prev.map((e) => (e.id === updatedEvent.id ? { ...e, ...updatedEvent } : e))
+      );
+    }
+  }, []);
 
   // Synchronize state and establish WebSocket connection for selected job
   useEffect(() => {
@@ -354,16 +416,28 @@ export default function RealtimeMonitoringPage() {
         {/* Row 2: Fix #2 — labelled session selector + contextual info + start/stop */}
         <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="flex flex-col gap-1 flex-1 min-w-0">
-            <label className="text-[10px] font-semibold text-[#4e5a6b] uppercase tracking-widest">
-              Analysis Session
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-semibold text-[#4e5a6b] uppercase tracking-widest">
+                Analysis Session
+              </label>
+              <button
+                type="button"
+                onClick={() => loadJobs(true)}
+                disabled={isLoadingJobs || isSessionActive}
+                className="flex items-center gap-1 text-[11px] text-[#8b96a8] hover:text-[#3b7dd8] transition-colors disabled:opacity-50"
+                title="Refresh sessions list"
+              >
+                <RefreshCw className={`w-3 h-3 ${isLoadingJobs ? 'animate-spin text-[#3b7dd8]' : ''}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
             <select
               value={selectedJobId}
               onChange={(e) => setSelectedJobId(e.target.value)}
               disabled={isSessionActive || isLoadingJobs}
               className="w-full px-3 py-1.5 rounded-lg bg-[#111620] border border-[#1e2736] text-xs text-[#e8edf5] focus:outline-none focus:border-[#3b7dd8] disabled:opacity-50 truncate"
             >
-              {isLoadingJobs ? (
+              {isLoadingJobs && jobs.length === 0 ? (
                 <option>Loading sessions…</option>
               ) : jobs.length === 0 ? (
                 <option value="">No analysis sessions available</option>
@@ -385,7 +459,19 @@ export default function RealtimeMonitoringPage() {
                 &nbsp;·&nbsp;Status: <span className="text-[#8b96a8]">{selectedJob.status}</span>
               </p>
             )}
-            {!selectedJobId && !isLoadingJobs && (
+            {jobsError && !isLoadingJobs && (
+              <p className="text-[10px] text-red-400 flex items-center gap-1.5">
+                <span>{jobsError}</span>
+                <button
+                  type="button"
+                  onClick={() => loadJobs(true)}
+                  className="underline hover:text-red-300 ml-1"
+                >
+                  Retry
+                </button>
+              </p>
+            )}
+            {!selectedJobId && !isLoadingJobs && !jobsError && (
               <p className="text-[10px] text-amber-400">Select a session to enable monitoring.</p>
             )}
           </div>
