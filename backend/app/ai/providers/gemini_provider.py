@@ -71,17 +71,16 @@ class GeminiProvider(AIProvider):
             context.report_id,
             self._model,
         )
-
         try:
             response = model.generate_content(prompt)
-            raw_text = response.text.strip()
-
-            # Strip markdown fences if the model ignored our instruction
+            raw_text = (response.text or "").strip()
             if raw_text.startswith("```"):
-                raw_text = raw_text.split("```")[1]
-                if raw_text.startswith("json"):
-                    raw_text = raw_text[4:]
-                raw_text = raw_text.strip()
+                lines = raw_text.splitlines()
+                if lines and lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                raw_text = "\n".join(lines).strip()
 
             parsed = json.loads(raw_text)
             usage = response.usage_metadata

@@ -9,6 +9,7 @@ import numpy as np
 from app.vision.detection.annotation import annotate_frame
 from app.vision.detection.detector import DetectionResult, ObjectDetector
 from app.vision.preprocessing import create_thumbnail, resize_frame
+from app.vision.tracking.tracker import ObjectTracker
 
 
 @dataclass
@@ -35,7 +36,7 @@ def save_frame_and_thumbnail(
     thumbnail_width: int = 320,
     jpeg_quality: int = 85,
     detector: Optional[ObjectDetector] = None,
-    tracker: Optional[object] = None,
+    tracker: Optional[ObjectTracker] = None,
     annotated_dir: Optional[str] = None,
     trajectories: Optional[dict] = None,
 ) -> ExtractedFrameInfo:

@@ -5,6 +5,6 @@
   "extraPaths": [
     "backend"
   ],
-  "venvPath": "backend",
+  "venvPath": ".",
   "venv": ".venv"
 }

@@ -68,7 +68,8 @@ class GroqProvider(AIProvider):
                 response_format={"type": "json_object"},
             )
 
-            raw_text = completion.choices[0].message.content.strip()
+            content = completion.choices[0].message.content
+            raw_text = (content or "").strip()
             parsed = json.loads(raw_text)
             prompt_tokens = (
                 completion.usage.prompt_tokens if completion.usage else None

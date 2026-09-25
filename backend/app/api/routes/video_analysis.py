@@ -32,6 +32,7 @@ from app.schemas.video_analysis import (
     AnalysisJobCreateResponse,
     AnalysisJobResponse,
     AnalysisResultResponse,
+    JobStatus,
 )
 from app.services import tracking_service
 from app.services.auth_service import get_user_by_id
@@ -140,13 +141,16 @@ def upload_video(
     )
 
     # Queue non-blocking processing
-    background_tasks.add_task(run_analysis_pipeline_background, job.id)
+    job_id = str(job.id)
+    background_tasks.add_task(run_analysis_pipeline_background, job_id)
 
+    raw_status = getattr(job, "status", JobStatus.QUEUED)
+    status_val = raw_status if isinstance(raw_status, JobStatus) else JobStatus(str(raw_status))
     return AnalysisJobCreateResponse(
-        id=job.id,
-        status=job.status,
-        original_filename=job.original_filename,
-        progress=job.progress,
+        id=job_id,
+        status=status_val,
+        original_filename=str(job.original_filename),
+        progress=int(getattr(job, "progress", 0)),
     )
 
 
@@ -354,20 +358,26 @@ def list_tracked_objects(
     )
     result = []
     for t in tracks:
-        result.append(TrackedObjectResponse(
-            id=t.id,
-            track_id=t.track_id,
-            class_id=t.class_id,
-            class_name=t.class_name,
-            first_seen_timestamp=round(t.first_seen_timestamp, 3),
-            last_seen_timestamp=round(t.last_seen_timestamp, 3),
-            duration_seconds=round(t.last_seen_timestamp - t.first_seen_timestamp, 2),
-            first_seen_frame=t.first_seen_frame,
-            last_seen_frame=t.last_seen_frame,
-            total_frames=t.total_frames,
-            average_confidence=round(t.average_confidence, 4),
-            max_confidence=round(t.max_confidence, 4),
-        ))
+        first_seen = float(getattr(t, "first_seen_timestamp"))
+        last_seen = float(getattr(t, "last_seen_timestamp"))
+        avg_conf = float(getattr(t, "average_confidence"))
+        max_conf = float(getattr(t, "max_confidence"))
+        result.append(
+            TrackedObjectResponse(
+                id=str(t.id),
+                track_id=int(getattr(t, "track_id")),
+                class_id=int(getattr(t, "class_id")),
+                class_name=str(t.class_name),
+                first_seen_timestamp=round(first_seen, 3),
+                last_seen_timestamp=round(last_seen, 3),
+                duration_seconds=round(last_seen - first_seen, 2),
+                first_seen_frame=int(getattr(t, "first_seen_frame")),
+                last_seen_frame=int(getattr(t, "last_seen_frame")),
+                total_frames=int(getattr(t, "total_frames")),
+                average_confidence=round(avg_conf, 4),
+                max_confidence=round(max_conf, 4),
+            )
+        )
     return result
 
 

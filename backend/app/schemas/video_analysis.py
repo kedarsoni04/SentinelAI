@@ -16,9 +16,9 @@ class AnalysisJobCreateResponse(BaseModel):
     id: str = Field(..., description="Unique analysis job UUID")
     status: JobStatus = Field(..., description="Initial job status (typically QUEUED)")
     original_filename: str = Field(..., description="Original uploaded filename")
-    progress: int = Field(0, ge=0, le=100, description="Processing progress percentage (0-100)")
+    progress: int = Field(default=0, ge=0, le=100, description="Processing progress percentage (0-100)")
     message: str = Field(
-        "Video uploaded successfully and queued for analysis.",
+        default="Video uploaded successfully and queued for analysis.",
         description="User-friendly status confirmation message",
     )
 
@@ -34,17 +34,17 @@ class AnalysisJobResponse(BaseModel):
     id: str
     user_id: str
     camera_id: Optional[str] = None
-    source_type: str = "VIDEO_FILE"
+    source_type: str = Field(default="VIDEO_FILE")
     original_filename: str
     status: JobStatus
-    progress: int = Field(0, ge=0, le=100)
+    progress: int = Field(default=0, ge=0, le=100)
     duration_seconds: Optional[float] = None
     fps: Optional[float] = None
     frame_count: Optional[int] = None
     width: Optional[int] = None
     height: Optional[int] = None
-    sampled_frames: int = 0
-    processed_frames: int = 0
+    sampled_frames: int = Field(default=0)
+    processed_frames: int = Field(default=0)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     created_at: datetime
